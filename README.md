@@ -40,8 +40,8 @@ As an AI first company, we don't mind but in fact encourage you to use all avail
 
 3. **Weather lookup tool**
 
-    * Accepts **location string or ZIP/postal code**, resolves to lat/long (e.g., Nominatim/Geocoding API) and fetches forecast from a weather API.
-    * The bot should decide **when** to call the weather tool vs. answer from context.
+    * Accepts **location string or ZIP/postal code** and fetches forecast from a weather API.
+    * The bot should decide **when** to call the weather tool.
 
 4. **Chat Memory**
 
