@@ -1,0 +1,98 @@
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.output/
+.wxt/
+web-ext.config.ts
+
+# Testing
+coverage/
+
+cdk.context.json
+
+# Production
+build/
+dist/
+out/
+tsconfig.tsbuildinfo
+.cdk.out/
+cdk.out/
+
+# Miscellaneous
+.DS_Store
+.poetry/
+.poetry-cache
+apps/infrastructure/.env
+.env.local
+.env.development
+.env.sentry-build-plugin
+.env.test
+.env.production
+.env.development-local
+.env.testing
+.env.staging
+.turbo/
+
+# API Keys and Secrets (extra protection)
+**/secrets.json
+**/api-keys.json
+**/.secrets
+**/openai-key.txt
+**/gpt-key.txt
+**/*-secrets.*
+**/*-keys.*
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE specific
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Sublime Text
+*.sublime-workspace
+
+# Logs
+logs/
+*.log
+
+# Python specific
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.egg-info/
+.installed.cfg
+*.egg
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# Windows System files
+desktop.ini
+/apps/infrastructure/cdk.out/
+
+# Sentry Config File
+.sentryclirc
