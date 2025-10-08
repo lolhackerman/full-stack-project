@@ -35,24 +35,30 @@ As an AI first company, we don't mind but in fact encourage you to use all avail
 
 2. **Backend API** (Node or Python)
 
-    * Single `/api/chat` endpoint that accepts a conversation history and latest user message.
-    * Server calls OpenAI’s chat API and implements **tool/function calling** for weather lookup.
+    * Working backend with good routing naming conventions that work with the UI.
 
 3. **Weather lookup tool**
 
     * Accepts **location string or ZIP/postal code** and fetches forecast from a weather API.
     * The bot should decide **when** to call the weather tool.
+      * Free api documentation listed below.
 
 4. **Chat Memory**
 
     * The chatbot is aware of previous messages and can remember them.
+      * Does not need to be persistent if user refreshes the page.
 
-5. **Working end‑to‑end flow**
+6. **Ability to delete messages**
+
+    * User should be able to delete messages from the chat history.
+
+
+7. **Working end‑to‑end flow**
 
     * User asks a weather question → model triggers the tool → server fetches weather → bot replies with a concise, friendly forecast.
     * Basic error handling (invalid location, network failure) with a useful message to the user.
 
-6. **README**
+8. **README**
 
     * Setup & run instructions, environment variables, and short architecture notes (what you built, trade‑offs, what you would do next).
 
@@ -60,7 +66,8 @@ As an AI first company, we don't mind but in fact encourage you to use all avail
 
 ## Above‑and‑Beyond (Stretch)
 
-1. **Plan‑and‑Execute Agent**
+1. **User Feedback**: User can thumb up/down a message.
+2. **Plan‑and‑Execute Agent**
 
     * Implement a light planning layer: the model produces an explicit **plan** then runs through each step.
 
@@ -72,11 +79,7 @@ As an AI first company, we don't mind but in fact encourage you to use all avail
 
     * Store conversations in a database **SQL/MongoDB/ect**.
 
-4. **Ability to delete messages**
-
-    * User should be able to delete messages from the chat history.
-
-5. **Deployment**
+4. **Deployment**
 
     * Deploy to a cloud of your choice (e.g., Vercel/Firebase/Heroku/Supabase/ect).
     * Provide a public URL in the README.
@@ -100,7 +103,7 @@ It does not need to be perfect. We will be assessing it holistically.
 
 These are the areas we are generally interested in:
 
-- The feature is complete and works according to requirements. It is stable, and edge cases are handled in a sensible, thought-out manner. There is error handling and authentication is considered.
+- The feature is complete and works according to minimum requirements. It is stable, and edge cases are handled in a sensible, thought-out manner. There is error handling and authentication is considered (Does not need to be implemented).
 - The code is well organized, easy to understand and readable, it follows best practices.
 - Feature implemented in a user-friendly, UI looks cohesive and delightful.
 - Well structured README with clear instructions on how to run the project and an overview on how you built it.
@@ -108,12 +111,16 @@ These are the areas we are generally interested in:
 ---
 
 ## Submission
-
+When done, please email us:
 * Public GitHub repo link.
-* **README** with:
+* In your repo, please update the **README** with:
     * clear local run instructions for **both** the UI and your chosen API (`py-api` or `ts-api`) including env vars and how to obtain API keys if needed.
     * brief architecture notes & trade‑offs.
-    * deployment URL if you attempted the stretch deploy.
-* The app is **fully functional** and meets all **Minimum Requirements**.
-* After it’s done, we will do an internal code review of your code and share feedback with you over email. If we like what we see, we will invite you to the technical interview with the team to discuss your solution.
+    * any stretch goals you implemented.
+* deployment URL if you did deploy.
+
 ---
+
+ ## After Submission 
+We will do an internal code review of your code and share feedback with you over email. If we like what we see, we will invite you to the technical interview with the team to discuss your solution.
+
