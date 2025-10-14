@@ -1,13 +1,13 @@
-# Full‑Stack Take‑Home: “Weather Chatbot”
+# Full‑Stack Take‑Home: “Tool-Enabled Chatbot”
 
 **Goal**
-As a full stack developer, you will be tested by building an end-to-end “weathercaster” bot. The bot uses an OpenAI model (or any model of your choice) and calls a weather API when appropriate to answer questions like “What is the weather in Boulder CO today?”. We will provide you with an openai api key via email with a small budget. 
+As a full stack developer, you will be tested by building an end-to-end chatbot that can call *at least one* tool. The bot should use an OpenAI model (or any model of your choice) and invoke your chosen tool when appropriate. This tool can be anything—from a weather lookup to a simple calculator or any other capability you would like to showcase. We will provide you with an OpenAI API key via email with a small budget.
 
 If you have any questions before starting or during the exercise, please send them to us. We will get back to you with the answers as soon as possible.
 
-As an AI first company, we don't mind but in fact encourage you to use all available tools and resources at your disposal.
+As an AI first company, we don't mind but in fact encourage you to use all available tools and resources at your disposal (codex, Github CoPilot, StackOverflow, etc.).
 
-> **Timebox:** Aim for ~6–8 hours of focused effort. It’s OK if you don’t complete all stretch goals. Optimize for clarity, quality, and trade‑offs. We are a team that values communication as well as working fast. We ask for you to take at most a week to complete the project. If you need additional time, please let us know.
+> **Timebox:** Aim for ~6–8 hours of focused effort. It’s OK if you don’t complete all stretch goals. Optimize for clarity, quality, and trade‑offs. We are a team that values communication as well as working fast. We ask for you to take at most 5 days to complete the project. If you need additional time, please let us know.
 > 
 > **Stack:** Frontend in **React + TailwindCSS**. Backend in **Node (TypeScript/JS)** *or* **Python**. Any build tooling is fine.
 
@@ -37,28 +37,28 @@ As an AI first company, we don't mind but in fact encourage you to use all avail
 
     * Working backend with good routing naming conventions that work with the UI.
 
-3. **Weather lookup tool**
+3. **LLM Tool Integration**
 
-    * Accepts **location string or ZIP/postal code** and fetches forecast from a weather API.
-    * The bot should decide **when** to call the weather tool.
-      * Free api documentation listed below.
+    * Implement at least one tool the model can call via your backend (e.g., calculator, weather lookup, todo list manager, etc.).
+    * The bot should decide **when** to call the tool based on the conversation.
+    * Document what the tool does and any external services or data sources it uses.
 
 4. **Chat Memory**
 
     * The chatbot is aware of previous messages and can remember them.
       * Does not need to be persistent if user refreshes the page.
 
-6. **Ability to delete messages**
+5. **Ability to delete messages**
 
     * User should be able to delete messages from the chat history.
 
 
-7. **Working end‑to‑end flow**
+6. **Working end‑to‑end flow**
 
-    * User asks a weather question → model triggers the tool → server fetches weather → bot replies with a concise, friendly forecast.
-    * Basic error handling (invalid location, network failure) with a useful message to the user.
+    * Example: user asks a question → model triggers your tool → server runs the tool → bot replies with a concise, helpful answer.
+    * Basic error handling (invalid inputs, network failure, etc.) with useful messaging.
 
-8. **README**
+7. **README**
 
     * Setup & run instructions, environment variables, and short architecture notes (what you built, trade‑offs, what you would do next).
 
@@ -71,15 +71,15 @@ As an AI first company, we don't mind but in fact encourage you to use all avail
 
     * Implement a light planning layer: the model produces an explicit **plan** then runs through each step.
 
-2. **Streamed Responses**
+3. **Streamed Responses**
 
     * **SSE/WebSocket** streaming of assistants **thinking** or **plan steps**.
 
-3. **Persistence**
+4. **Persistence**
 
     * Store conversations in a database **SQL/MongoDB/ect**.
 
-4. **Deployment**
+5. **Deployment**
 
     * Deploy to a cloud of your choice (e.g., Vercel/Firebase/Heroku/Supabase/ect).
     * Provide a public URL in the README.
@@ -90,8 +90,7 @@ As an AI first company, we don't mind but in fact encourage you to use all avail
 
 ## Data Sources
 
-* **Weather API:** [WeatherStack](https://weatherstack.com/): They have a free tier.
-  * Documentation:  https://weatherstack.com/documentation
+Feel free to choose any APIs or data sources that suit the tool you want to build. Document how to obtain access and any setup required so we can run it locally.
 
 ---
 
@@ -123,4 +122,3 @@ When done, please email us:
 
  ## After Submission 
 We will do an internal code review of your code and share feedback with you over email. If we like what we see, we will invite you to the technical interview with the team to discuss your solution.
-
