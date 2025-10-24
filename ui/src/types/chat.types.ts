@@ -13,11 +13,15 @@ export type ChatDownload = {
   data: string;
 };
 
+export type MessageFeedbackValue = 'up' | 'down';
+
 export type ChatMessage = {
   id: string;
   role: ChatRole;
   content: string;
   downloads?: ChatDownload[];
+  assistantMessageId?: string | null;
+  feedback?: MessageFeedbackValue | null;
 };
 
 export type ChatSummary = {
@@ -31,6 +35,11 @@ export type ChatResponsePayload = {
   model?: string;
   coverLetterId?: string;
   downloads?: ChatDownload[];
+  assistantMessageId?: string | null;
+  feedback?: {
+    status: MessageFeedbackValue;
+    comment?: string;
+  } | null;
 };
 
 export type ChatThreadInfo = {

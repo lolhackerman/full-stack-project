@@ -4,7 +4,7 @@
  */
 
 import { DragEvent, FormEvent } from 'react';
-import { ChatMessage } from '../types/chat.types';
+import { ChatMessage, MessageFeedbackValue } from '../types/chat.types';
 
 type ChatPanelProps = {
   messages: ChatMessage[];
@@ -14,6 +14,8 @@ type ChatPanelProps = {
   isSubmitDisabled: boolean;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onMessageChange: (message: string) => void;
+  onFeedback: (messageId: string, feedback: MessageFeedbackValue | null) => Promise<void>;
+  feedbackPending: Record<string, boolean>;
 };
 
 export const ChatPanel = ({
@@ -24,6 +26,8 @@ export const ChatPanel = ({
   isSubmitDisabled,
   onSubmit,
   onMessageChange,
+  onFeedback,
+  feedbackPending,
 }: ChatPanelProps) => {
   return (
     <div className="flex min-h-[520px] flex-col rounded-2xl border border-slate-800/60 bg-slate-900/60 shadow-lg shadow-emerald-500/10 backdrop-blur">
@@ -140,6 +144,83 @@ export const ChatPanel = ({
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Feedback Controls */}
+            {message.role === 'assistant' && message.assistantMessageId && (
+              <div className="mt-2 flex items-center gap-1.5 text-[10px] text-slate-400">
+                <span className="uppercase tracking-wider">Was this helpful?</span>
+                <div className="flex items-center gap-1.5">
+                  {(['up', 'down'] as MessageFeedbackValue[]).map((value) => {
+                    const isSelected = message.feedback === value;
+                    const isPending = Boolean(feedbackPending[message.id]);
+                    const nextValue: MessageFeedbackValue | null = isSelected ? null : value;
+
+                    const baseClasses =
+                      'inline-flex h-6 w-6 items-center justify-center rounded-full border text-[10px] transition focus:outline-none focus:ring focus:ring-emerald-200/70';
+                    const selectedClasses =
+                      value === 'up'
+                        ? 'bg-emerald-400/20 border-emerald-300 text-emerald-200'
+                        : 'bg-rose-500/20 border-rose-400 text-rose-200';
+                    const idleClasses =
+                      value === 'up'
+                        ? 'border-slate-700 text-slate-300 hover:border-emerald-400 hover:text-emerald-200'
+                        : 'border-slate-700 text-slate-300 hover:border-rose-400 hover:text-rose-200';
+
+                    const title = value === 'up' ? 'Thumbs up' : 'Thumbs down';
+                    const ariaLabel = value === 'up' ? 'Mark response helpful' : 'Mark response not helpful';
+
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={isSelected}
+                        aria-label={ariaLabel}
+                        title={title}
+                        disabled={isPending}
+                        className={`${baseClasses} ${isSelected ? selectedClasses : idleClasses} disabled:cursor-not-allowed disabled:opacity-60`}
+                        onClick={() => {
+                          void onFeedback(message.id, nextValue);
+                        }}
+                      >
+                        {value === 'up' ? (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.8}
+                            className="h-3.5 w-3.5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M14 9V5a3 3 0 00-3-3l-3 9v11h9.28a2 2 0 001.96-1.57l1.38-6A2 2 0 0018.66 12H14z"
+                            />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 22H4a2 2 0 01-2-2v-6a2 2 0 012-2h2" />
+                          </svg>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={1.8}
+                            className="h-3.5 w-3.5"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M10 15v4a3 3 0 003 3l3-9V2h-9.28a2 2 0 00-1.96 1.57l-1.38 6A2 2 0 005.34 12H10z"
+                            />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M18 2h2a2 2 0 012 2v6a2 2 0 01-2 2h-2" />
+                          </svg>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </article>

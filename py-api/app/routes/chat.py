@@ -82,18 +82,18 @@ def _save_message_to_history(
     role: str,
     content: str,
     metadata: Optional[Dict[str, Any]] = None,
-):
+) -> Optional[str]:
     """Save a message to MongoDB chat history if enabled."""
     if not ENABLE_MONGODB:
-        return
+        return None
     
     try:
         access_code = session.get("access_code")
         if not access_code:
             current_app.logger.warning("Session missing access_code, cannot save to MongoDB")
-            return
+            return None
         
-        chat_history_service.save_message(
+        return chat_history_service.save_message(
             access_code=access_code,
             profile_id=session["profile_id"],
             thread_id=thread_id,
@@ -103,6 +103,42 @@ def _save_message_to_history(
         )
     except Exception as e:
         current_app.logger.error(f"Failed to save message to MongoDB: {e}")
+        return None
+
+
+def _respond_with_assistant_message(
+    session: Dict[str, Any],
+    thread_id: Optional[str],
+    reply_text: str,
+    *,
+    attachments: List[Dict[str, Any]],
+    cover_letter_id: Optional[str] = None,
+    downloads: Optional[List[Dict[str, Any]]] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+    status: int = 200,
+    extra_body: Optional[Dict[str, Any]] = None,
+):
+    """Persist an assistant reply (when available) and build a consistent response."""
+    message_id = _save_message_to_history(
+        session=session,
+        thread_id=thread_id,
+        role="assistant",
+        content=reply_text,
+        metadata=metadata,
+    )
+
+    payload: Dict[str, Any] = {
+        "reply": reply_text,
+        "attachments": attachments,
+        "coverLetterId": cover_letter_id,
+        "downloads": downloads or [],
+        "assistantMessageId": message_id,
+    }
+
+    if extra_body:
+        payload.update(extra_body)
+
+    return jsonify(payload), status
 
 
 @bp.post("/chat")
@@ -219,27 +255,20 @@ def chat_with_model():
     # ENHANCED PDF REQUEST DETECTION AND HANDLING
     pdf_request = letter_service.detect_pdf_request(message)
     if pdf_request:
-        # If we're in resume advice mode, do not suggest or perform any PDF creation
-        if in_resume_advice_mode and pdf_request == "cover_letter":
+        # Only block PDF creation when we are actively in resume-review mode and no letter is available yet
+        if in_resume_advice_mode and pdf_request == "cover_letter" and active_letter is None:
             reply_text = (
                 "While we're working on resume feedback, I won't create PDFs. "
                 "I can generate PDFs for cover letters—ask me to draft a cover letter when you're ready."
             )
-            _save_message_to_history(
+            return _respond_with_assistant_message(
                 session=session,
                 thread_id=thread_id,
-                role="assistant",
-                content=reply_text,
+                reply_text=reply_text,
+                attachments=attachments,
+                cover_letter_id=None,
+                downloads=[],
                 metadata={"pdf_request_blocked_in_resume_mode": True},
-            )
-            return (
-                jsonify(
-                    reply=reply_text,
-                    attachments=attachments,
-                    coverLetterId=None,
-                    downloads=[],
-                ),
-                200,
             )
         # Handle direct PDF export requests without contacting the model.
         downloads: List[Dict[str, Any]] = []
@@ -253,21 +282,14 @@ def chat_with_model():
                     "Please share the job description and company name so I can draft it."
                 )
                 # Save message indicating we're ready to draft
-                _save_message_to_history(
+                return _respond_with_assistant_message(
                     session=session,
                     thread_id=thread_id,
-                    role="assistant",
-                    content=reply_text,
+                    reply_text=reply_text,
+                    attachments=attachments,
+                    cover_letter_id=None,
+                    downloads=[],
                     metadata={"pdf_requested": True, "needs_draft": True},
-                )
-                return (
-                    jsonify(
-                        reply=reply_text,
-                        attachments=attachments,
-                        coverLetterId=None,
-                        downloads=[],
-                    ),
-                    200,
                 )
 
             # Check for missing critical fields only
@@ -279,21 +301,14 @@ def chat_with_model():
                     f"Please share these details and I'll create the PDF immediately."
                 )
                 # Save message about missing fields
-                _save_message_to_history(
+                return _respond_with_assistant_message(
                     session=session,
                     thread_id=thread_id,
-                    role="assistant",
-                    content=reply_text,
+                    reply_text=reply_text,
+                    attachments=attachments,
+                    cover_letter_id=letter_record["id"],
+                    downloads=[],
                     metadata={"pdf_requested": True, "missing_fields": missing_fields},
-                )
-                return (
-                    jsonify(
-                        reply=reply_text,
-                        attachments=attachments,
-                        coverLetterId=letter_record["id"],
-                        downloads=[],
-                    ),
-                    200,
                 )
 
             # ATTEMPT PDF GENERATION
@@ -302,14 +317,6 @@ def chat_with_model():
                 encoded_pdf = base64.b64encode(pdf_bytes).decode("ascii")
                 reply_text = "Here is your PDF cover letter:"
                 
-                # Save successful PDF generation
-                _save_message_to_history(
-                    session=session,
-                    thread_id=thread_id,
-                    role="assistant",
-                    content=reply_text,
-                    metadata={"pdf_generated": True, "pdf_type": "cover_letter"},
-                )
             except Exception as pdf_error:
                 current_app.logger.exception("Failed to render cover letter PDF")
                 # Report specific technical error instead of claiming inability
@@ -321,23 +328,16 @@ def chat_with_model():
                 )
                 encoded_pdf = None
                 
-                # Save error details
-                _save_message_to_history(
+                # Save error details and respond
+                return _respond_with_assistant_message(
                     session=session,
                     thread_id=thread_id,
-                    role="assistant",
-                    content=reply_text,
+                    reply_text=reply_text,
+                    attachments=attachments,
+                    cover_letter_id=letter_record["id"],
+                    downloads=[],
                     metadata={"pdf_error": error_message, "pdf_type": "cover_letter"},
-                )
-                return (
-                    jsonify(
-                        reply=reply_text,
-                        attachments=attachments,
-                        coverLetterId=letter_record["id"],
-                        downloads=[],
-                        error="pdf_generation_failed",
-                    ),
-                    200,
+                    extra_body={"error": "pdf_generation_failed"},
                 )
 
             cover_letter_id = letter_record["id"]
@@ -352,6 +352,16 @@ def chat_with_model():
                         "data": encoded_pdf,
                     }
                 )
+            # Refactored success branch to helper
+            return _respond_with_assistant_message(
+                session=session,
+                thread_id=thread_id,
+                reply_text=reply_text,
+                attachments=attachments,
+                cover_letter_id=cover_letter_id,
+                downloads=downloads,
+                metadata={"pdf_generated": True, "pdf_type": "cover_letter"},
+            )
         else:
             # Handle resume PDF request: not supported. Provide feedback instead.
             # Policy: Do not create PDFs for resumes. Proceed with resume feedback.
@@ -364,21 +374,14 @@ def chat_with_model():
                     f"{preface} "
                     "Please upload your resume using the file upload panel on the right, and I'll provide detailed feedback."
                 )
-                _save_message_to_history(
+                return _respond_with_assistant_message(
                     session=session,
                     thread_id=thread_id,
-                    role="assistant",
-                    content=reply_text,
+                    reply_text=reply_text,
+                    attachments=attachments,
+                    cover_letter_id=None,
+                    downloads=[],
                     metadata={"resume_review_requested": True, "needs_resume_upload": True},
-                )
-                return (
-                    jsonify(
-                        reply=reply_text,
-                        attachments=attachments,
-                        coverLetterId=None,
-                        downloads=[],
-                    ),
-                    200,
                 )
 
             if not resume_record.get("text"):
@@ -388,21 +391,14 @@ def chat_with_model():
                     "This might be an image-based PDF or a format I can't read. "
                     "Please try uploading a text-based PDF or Word document for me to review."
                 )
-                _save_message_to_history(
+                return _respond_with_assistant_message(
                     session=session,
                     thread_id=thread_id,
-                    role="assistant",
-                    content=reply_text,
+                    reply_text=reply_text,
+                    attachments=attachments,
+                    cover_letter_id=None,
+                    downloads=[],
                     metadata={"resume_review_requested": True, "no_text_content": True},
-                )
-                return (
-                    jsonify(
-                        reply=reply_text,
-                        attachments=attachments,
-                        coverLetterId=None,
-                        downloads=[],
-                    ),
-                    200,
                 )
 
             # Generate resume review (feedback) instead of a PDF
@@ -1282,6 +1278,70 @@ def chat_with_model():
             ),
             500,
         )
+
+
+@bp.post("/chat/feedback")
+def submit_message_feedback():
+    """Record thumbs-up/down feedback for an assistant response."""
+    if not ENABLE_MONGODB:
+        return jsonify(error="Chat history feature is not enabled."), 503
+
+    session, error_response = require_session()
+    if error_response is not None:
+        return error_response
+
+    access_code = session.get("access_code")
+    if not access_code:
+        return jsonify(error="Session missing access code."), 400
+
+    payload: Dict[str, Any] = request.get_json(silent=True) or {}
+    message_id = str(payload.get("messageId") or "").strip()
+    feedback_value = str(payload.get("feedback") or "").strip().lower()
+    comment = payload.get("comment")
+
+    if not message_id:
+        return jsonify(error="Missing 'messageId' in request body."), 400
+
+    valid_feedback = {"up", "down", "none"}
+    if feedback_value not in valid_feedback:
+        return jsonify(error="Invalid 'feedback' value. Use 'up', 'down', or 'none'."), 400
+
+    normalized_feedback: Optional[str]
+    if feedback_value == "none":
+        normalized_feedback = None
+    else:
+        normalized_feedback = feedback_value
+
+    normalized_comment: Optional[str] = None
+    if comment is not None:
+        normalized_comment = str(comment).strip() or None
+
+    try:
+        updated = chat_history_service.set_message_feedback(
+            access_code=access_code,
+            profile_id=session["profile_id"],
+            message_id=message_id,
+            feedback=normalized_feedback,
+            comment=normalized_comment,
+        )
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+    except Exception as exc:  # pragma: no cover - defensive safety net
+        current_app.logger.exception("Failed to record chat feedback")
+        return jsonify(error="Failed to record feedback.", details=str(exc)), 500
+
+    if updated == 0:
+        return jsonify(error="Message not found or not eligible for feedback."), 404
+
+    response_payload: Dict[str, Any] = {"message": "Feedback recorded."}
+    if normalized_feedback is None:
+        response_payload["feedback"] = None
+    else:
+        response_payload["feedback"] = {"status": normalized_feedback}
+        if normalized_comment:
+            response_payload["feedback"]["comment"] = normalized_comment
+
+    return jsonify(response_payload), 200
 
 
 @bp.get("/chat/history")

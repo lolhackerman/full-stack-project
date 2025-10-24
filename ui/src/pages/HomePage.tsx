@@ -107,6 +107,8 @@ const HomePage = () => {
     handleSelectThread,
     resetConversation,
     deleteThread,
+    handleMessageFeedback,
+    feedbackPending,
   } = useChat({
     sessionToken,
     apiBaseUrl: API_BASE_URL,
@@ -191,6 +193,8 @@ const HomePage = () => {
             isSubmitDisabled={isSubmitDisabled}
             onSubmit={handleChatSubmit}
             onMessageChange={setPendingMessage}
+            onFeedback={handleMessageFeedback}
+            feedbackPending={feedbackPending}
           />
 
           {/* Right Sidebar - File Upload */}

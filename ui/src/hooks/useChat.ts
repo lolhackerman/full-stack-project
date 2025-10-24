@@ -4,7 +4,7 @@
  */
 
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChatMessage, ChatThreadInfo, ChatResponsePayload } from '../types/chat.types';
+import { ChatMessage, ChatThreadInfo, ChatResponsePayload, MessageFeedbackValue } from '../types/chat.types';
 import { createId, createThreadId, readFromStorage, writeToStorage, removeFromStorage } from '../utils/helpers';
 import { GREETING_MESSAGE, THREAD_STORAGE_KEY, THREADS_INDEX_KEY } from '../utils/constants';
 
@@ -29,6 +29,8 @@ type UseChatReturn = {
   handleSelectThread: (threadId: string) => void;
   resetConversation: (options?: { force?: boolean }) => void;
   deleteThread: (threadId: string) => Promise<void>;
+  handleMessageFeedback: (messageId: string, feedback: MessageFeedbackValue | null) => Promise<void>;
+  feedbackPending: Record<string, boolean>;
 };
 
 /**
@@ -37,7 +39,14 @@ type UseChatReturn = {
  */
 export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError }: UseChatProps): UseChatReturn => {
   const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    { id: createId(), role: 'assistant', content: GREETING_MESSAGE, downloads: [] },
+    {
+      id: createId(),
+      role: 'assistant',
+      content: GREETING_MESSAGE,
+      downloads: [],
+      assistantMessageId: null,
+      feedback: null,
+    },
   ]);
   const [pendingMessage, setPendingMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +56,8 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
   const [threadSummaries, setThreadSummaries] = useState<ChatThreadInfo[]>([]);
   const [hasLoadedMongoThreads, setHasLoadedMongoThreads] = useState(false);
   const [lastThreadRefresh, setLastThreadRefresh] = useState<number>(0);
+  const [lastMessageRefresh, setLastMessageRefresh] = useState<number>(0);
+  const [feedbackPending, setFeedbackPending] = useState<Record<string, boolean>>({});
 
   const isSubmitDisabled = useMemo(
     () => !pendingMessage.trim() || isLoading || !sessionToken,
@@ -61,7 +72,16 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
       removeFromStorage(THREAD_STORAGE_KEY);
       setThreadSummaries([]);
       setActiveThreadId(null);
-      setMessages([{ id: createId(), role: 'assistant', content: GREETING_MESSAGE, downloads: [] }]);
+      setMessages([
+        {
+          id: createId(),
+          role: 'assistant',
+          content: GREETING_MESSAGE,
+          downloads: [],
+          assistantMessageId: null,
+          feedback: null,
+        },
+      ]);
       setHasLoadedMongoThreads(true);
       return;
     }
@@ -167,13 +187,51 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
               id: msg._id || createId(),
               role: msg.role,
               content: msg.content,
-              downloads: [],
+              downloads: Array.isArray(msg.downloads) ? msg.downloads : [],
+              assistantMessageId: msg._id ?? null,
+              feedback:
+                msg.metadata?.feedback?.status === 'up' || msg.metadata?.feedback?.status === 'down'
+                  ? (msg.metadata.feedback.status as MessageFeedbackValue)
+                  : null,
             }));
 
-            const hasOnlyGreeting = messages.length === 1 && messages[0].content === GREETING_MESSAGE;
-            if (messages.length === 0 || hasOnlyGreeting) {
-              setMessages(loadedMessages);
-            }
+            setMessages((previousMessages) => {
+              if (previousMessages.length === 0) {
+                return loadedMessages;
+              }
+
+              const downloadMap = new Map<string, ChatMessage['downloads']>();
+              for (const message of previousMessages) {
+                if (
+                  message.role === 'assistant' &&
+                  message.assistantMessageId &&
+                  message.downloads &&
+                  message.downloads.length > 0
+                ) {
+                  downloadMap.set(message.assistantMessageId, message.downloads);
+                }
+              }
+
+              if (downloadMap.size === 0) {
+                return loadedMessages;
+              }
+
+              return loadedMessages.map((message) => {
+                if (
+                  message.role === 'assistant' &&
+                  message.assistantMessageId &&
+                  (!message.downloads || message.downloads.length === 0)
+                ) {
+                  const preservedDownloads = downloadMap.get(message.assistantMessageId);
+                  if (preservedDownloads && preservedDownloads.length > 0) {
+                    return { ...message, downloads: preservedDownloads };
+                  }
+                }
+                return message;
+              });
+            });
+          } else {
+            setMessages((previousMessages) => previousMessages);
           }
         }
       } catch (err) {
@@ -184,7 +242,7 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
 
     void loadThreadMessages();
     return () => controller.abort();
-  }, [sessionToken, activeThreadId, apiBaseUrl]);
+  }, [sessionToken, activeThreadId, apiBaseUrl, lastMessageRefresh]);
 
   /**
    * Starts a new conversation thread
@@ -205,7 +263,16 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
     // Remove any stale placeholder entry for this threadId without adding
     // a new summary until the backend persists the conversation.
     setThreadSummaries((prev) => prev.filter((thread) => thread.id !== newThreadId));
-    setMessages([{ id: createId(), role: 'assistant', content: GREETING_MESSAGE, downloads: [] }]);
+    setMessages([
+      {
+        id: createId(),
+        role: 'assistant',
+        content: GREETING_MESSAGE,
+        downloads: [],
+        assistantMessageId: null,
+        feedback: null,
+      },
+    ]);
     setPendingMessage('');
     setChatError(null);
     setLatestCoverLetterId(null);
@@ -244,7 +311,16 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
 
     if (activeThreadId === threadId) {
       setActiveThreadId(null);
-      setMessages([{ id: createId(), role: 'assistant', content: GREETING_MESSAGE, downloads: [] }]);
+      setMessages([
+        {
+          id: createId(),
+          role: 'assistant',
+          content: GREETING_MESSAGE,
+          downloads: [],
+          assistantMessageId: null,
+          feedback: null,
+        },
+      ]);
       setPendingMessage('');
       setLatestCoverLetterId(null);
     }
@@ -274,6 +350,8 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
       role: 'user',
       content: trimmed,
       downloads: [],
+      assistantMessageId: null,
+      feedback: null,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -310,6 +388,11 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
         role: 'assistant',
         content: data.reply ?? 'No response received.',
         downloads: data.downloads ?? [],
+        assistantMessageId: data.assistantMessageId ?? null,
+        feedback:
+          data.feedback?.status === 'up' || data.feedback?.status === 'down'
+            ? (data.feedback.status as MessageFeedbackValue)
+            : null,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -319,6 +402,7 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
       // The backend will have the updated timestamp from save_message
       // and will generate the title from the first user message
       setLastThreadRefresh(Date.now());
+      setLastMessageRefresh(Date.now());
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       setChatError(message);
@@ -350,9 +434,49 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
               id: msg._id || createId(),
               role: msg.role,
               content: msg.content,
-              downloads: [],
+              downloads: Array.isArray(msg.downloads) ? msg.downloads : [],
+              assistantMessageId: msg._id ?? null,
+              feedback:
+                msg.metadata?.feedback?.status === 'up' || msg.metadata?.feedback?.status === 'down'
+                  ? (msg.metadata.feedback.status as MessageFeedbackValue)
+                  : null,
             }));
-            setMessages(loadedMessages);
+
+            setMessages((previousMessages) => {
+              if (previousMessages.length === 0) {
+                return loadedMessages;
+              }
+
+              const downloadMap = new Map<string, ChatMessage['downloads']>();
+              for (const message of previousMessages) {
+                if (
+                  message.role === 'assistant' &&
+                  message.assistantMessageId &&
+                  message.downloads &&
+                  message.downloads.length > 0
+                ) {
+                  downloadMap.set(message.assistantMessageId, message.downloads);
+                }
+              }
+
+              if (downloadMap.size === 0) {
+                return loadedMessages;
+              }
+
+              return loadedMessages.map((message) => {
+                if (
+                  message.role === 'assistant' &&
+                  message.assistantMessageId &&
+                  (!message.downloads || message.downloads.length === 0)
+                ) {
+                  const preservedDownloads = downloadMap.get(message.assistantMessageId);
+                  if (preservedDownloads && preservedDownloads.length > 0) {
+                    return { ...message, downloads: preservedDownloads };
+                  }
+                }
+                return message;
+              });
+            });
             setPendingMessage('');
             setChatError(null);
             setLatestCoverLetterId(null);
@@ -364,10 +488,79 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
       }
     }
 
-    setMessages([{ id: createId(), role: 'assistant', content: GREETING_MESSAGE, downloads: [] }]);
+    setMessages([
+      {
+        id: createId(),
+        role: 'assistant',
+        content: GREETING_MESSAGE,
+        downloads: [],
+        assistantMessageId: null,
+        feedback: null,
+      },
+    ]);
     setPendingMessage('');
     setChatError(null);
     setLatestCoverLetterId(null);
+  };
+
+  /**
+   * Submits thumbs up/down feedback for an assistant message
+   */
+  const handleMessageFeedback = async (messageId: string, feedback: MessageFeedbackValue | null) => {
+    const targetMessage = messages.find((message) => message.id === messageId);
+    if (!targetMessage || targetMessage.role !== 'assistant' || !targetMessage.assistantMessageId) {
+      return;
+    }
+
+    if (!sessionToken) {
+      onAuthError();
+      setChatError('Enter your access code to continue.');
+      return;
+    }
+
+    const previousFeedback: MessageFeedbackValue | null = targetMessage.feedback ?? null;
+    const desiredFeedback = feedback;
+    const payloadFeedback = desiredFeedback ?? 'none';
+
+    setFeedbackPending((prev) => ({ ...prev, [messageId]: true }));
+    setChatError(null);
+    setMessages((prev) =>
+      prev.map((message) => (message.id === messageId ? { ...message, feedback: desiredFeedback } : message)),
+    );
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/chat/feedback`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          messageId: targetMessage.assistantMessageId,
+          feedback: payloadFeedback,
+        }),
+      });
+
+      if (!response.ok) {
+        const problem = await response.json().catch(() => ({}));
+        throw new Error(problem.error ?? 'Failed to record feedback');
+      }
+
+      setLastMessageRefresh(Date.now());
+    } catch (err) {
+      const debugMessage = err instanceof Error ? err.message : 'Unable to record feedback';
+      setMessages((prev) =>
+        prev.map((msg) => (msg.id === messageId ? { ...msg, feedback: previousFeedback } : msg)),
+      );
+      console.warn('Failed to submit feedback:', debugMessage);
+      setChatError('Unable to record your feedback. Please try again.');
+    } finally {
+      setFeedbackPending((prev) => {
+        const updated = { ...prev };
+        delete updated[messageId];
+        return updated;
+      });
+    }
   };
 
   return {
@@ -384,5 +577,7 @@ export const useChat = ({ sessionToken, apiBaseUrl, uploadedFileIds, onAuthError
     handleSelectThread,
     resetConversation,
     deleteThread,
+    handleMessageFeedback,
+    feedbackPending,
   };
 };

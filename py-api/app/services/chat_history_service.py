@@ -5,6 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from bson import ObjectId
+from bson.errors import InvalidId
+
 from app.database import get_database
 
 
@@ -145,6 +148,48 @@ def save_message(
     return str(result.inserted_id)
 
 
+def set_message_feedback(
+    access_code: str,
+    profile_id: str,
+    message_id: str,
+    feedback: Optional[str],
+    comment: Optional[str] = None,
+) -> int:
+    """Persist thumbs-up/down feedback for an assistant message."""
+    db = get_database()
+    collection = db.chat_history
+
+    try:
+        object_id = ObjectId(message_id)
+    except (InvalidId, TypeError) as exc:
+        raise ValueError("Invalid messageId provided.") from exc
+
+    query = {
+        "_id": object_id,
+        "access_code": access_code,
+        "profile_id": profile_id,
+        "role": "assistant",
+    }
+
+    if feedback is None:
+        update_doc: Dict[str, Any] = {"$unset": {"metadata.feedback": ""}}
+    else:
+        if feedback not in {"up", "down"}:
+            raise ValueError("Feedback must be 'up', 'down', or None.")
+
+        feedback_doc: Dict[str, Any] = {
+            "status": feedback,
+            "updated_at": datetime.utcnow(),
+        }
+        if comment:
+            feedback_doc["comment"] = comment
+
+        update_doc = {"$set": {"metadata.feedback": feedback_doc}}
+
+    result = collection.update_one(query, update_doc)
+    return result.modified_count
+
+
 def get_chat_history(
     access_code: str,
     profile_id: str,
@@ -188,6 +233,13 @@ def get_chat_history(
             msg["timestamp"] = msg["timestamp"].isoformat()
         if "created_at" in msg:
             msg["created_at"] = msg["created_at"].isoformat()
+        metadata = msg.get("metadata")
+        if isinstance(metadata, dict):
+            feedback = metadata.get("feedback")
+            if isinstance(feedback, dict):
+                updated_at = feedback.get("updated_at")
+                if hasattr(updated_at, "isoformat"):
+                    feedback["updated_at"] = updated_at.isoformat()
     
     return messages
 

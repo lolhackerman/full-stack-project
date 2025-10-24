@@ -2,13 +2,16 @@
 
 A simple full-stack application that generates tailored cover letters using AI. Upload your resume/documents, paste a job description, and get a personalized cover letter.
 
+## URL
+https://applywise-ten.vercel.app/ 
+
 ## Features
 
 - **openAI-Powered Chat**: Conversational interface using OpenAI GPT models
 - **Document Upload**: Upload resumes, portfolios, or any relevant documents (PDF, TXT, DOCX)
-- **Resume Review & Feedback**: Get comprehensive, actionable feedback on your resume
-- **Cover Letter Generation**: Creates customized cover letters based on your documents and job descriptions
+- **Cover Letter Generation**: Primary use, creates customized cover letters based on your documents and job descriptions
 - **PDF Export**: Download generated cover letters as formatted PDFs
+- **Resume Review & Feedback**: Get comprehensive, actionable feedback on your resume
 - **Persistent Storage**: Chat history and uploads saved to MongoDB
 - **Session Management**: Secure access code-based authentication
 - **Multi-Threading**: Manage multiple conversations in separate threads
@@ -56,7 +59,8 @@ Frontend runs on `http://localhost:5173`
 ### 3. Access the App
 
 1. Open `http://localhost:5173`
-2. Enter an access code (any code works - creates a new session)
+2. Select 'Create New Workspace' to recieve a new code
+3. Select Access 'workspace'
 3. Upload your documents
 4. Paste a job description
 5. Get your cover letter!
@@ -84,8 +88,6 @@ The AI analyzes:
 - Skills organization
 - Alignment with job requirements (if job description provided)
 
-**See [RESUME_REVIEW_FEATURE.md](./RESUME_REVIEW_FEATURE.md) for detailed documentation.**
-
 ### Cover Letter Generation
 
 Create tailored cover letters:
@@ -103,7 +105,7 @@ Get resume feedback AND a tailored cover letter based on role:
 3. Ask: "Review my resume for this role"
 4. Get targeted feedback
 5. Ask: "Now draft a cover letter"
-6. Download or drag and drop cover 
+6. Download or drag and drop cover letter
 
 ## Architecture
 
@@ -146,17 +148,23 @@ py-api/ (Flask + Python)
 
 ## Development Notes
 
-- Files are stored in MongoDB GridFS when persistence is enabled
+- Files are stored in MongoDB GridFS
 - Chat history is tied to access codes (sessions)
 - Cover letters are generated with specific formatting for professional output
 - Maximum file upload size: 5MB per request
 
-## Trade-offs & Future Improvements
+## Stretch goals, Trade-offs & Future Improvements
+
+**Stretch gaols reached**
+- Persistance 
+- Deployment(Render, Vercel, Atlas)
+- User feedback for replies (thumbs up/down)
+
 
 **Current Trade-offs:**
 - Simple access code auth (no passwords/encryption)
-- File uploads limited to 5MB
-- No logic for resume PDF generation/formatting
+- No logic for resume PDF generation/formatting only cover letter
+- No socket streaming or walk through steps
 
 
 **Future Enhancements:**
@@ -164,27 +172,10 @@ py-api/ (Flask + Python)
 - Implement streaming responses for better UX
 - Add cover letter templates/customization
 - Add resume PDF generation logic 
-- Add email API to schedule follow up message for applications
+- Add email API to schedule follow up emails for applications
 - Add rate limiting and usage quotas
 - Support more document formats
 
-## Testing
-
-Test MongoDB connection:
-```bash
-cd py-api
-python test_mongodb.py
-```
-
-Test authentication:
-```bash
-python test_persistent_auth.py
-```
-
-Test file uploads:
-```bash
-python test_upload_persistence.py
-```
 
 ## Tool documentation
 
@@ -207,8 +198,7 @@ python test_upload_persistence.py
 - Records come from `app.storage.cover_letters` or MongoDB via the letter service and include fields such as `id`, `profile_id`, `name`, `header_date`, `text`, and optional `uploaded_at` or base64 `contents`.
 
 ## Dependencies & Ops
-- Uses `fpdf2` for PDF rendering and optionally `pyphen` for hyphenation; both degrade gracefully if hyphenation fails.
-- Routes fail fast when placeholders remain unresolved and log render errors as `pdf_generation_failed` for troubleshooting.
+- Uses `fpdf2` for PDF rendering and optionally `pyphen` for hyphenation
 
 
 
