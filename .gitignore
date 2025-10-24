@@ -86,6 +86,9 @@ htmlcov/
 .installed.cfg
 *.egg
 
+# GitHub Copilot artifacts
+.copilot/
+
 # OS generated files
 Thumbs.db
 ehthumbs.db

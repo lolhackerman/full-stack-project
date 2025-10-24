@@ -1,13 +1,12 @@
-from flask import Flask, jsonify
+"""Development entrypoint delegating to the application package."""
 
-app = Flask(__name__)
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
-@app.get("/")
-def index():
-    """Basic health check endpoint."""
-    return jsonify(message="Hello from ThreadWise Flask API"), 200
+from app.main import app
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5050, debug=True)

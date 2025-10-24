@@ -1,1 +1,8 @@
 Flask>=2.3,<3.0
+flask-cors>=4.0
+openai>=1.37.0
+fpdf2>=2.7
+pypdf>=4.0
+pyphen>=1.0
+pymongo>=4.6.0
+python-dotenv>=1.0.0

@@ -1,124 +1,214 @@
-# Full‑Stack Take‑Home: “Tool-Enabled Chatbot”
+# Cover Letter Generator - AI Chatbot
 
-**Goal**
-As a full stack developer, you will be tested by building an end-to-end chatbot that can call *at least one* tool. The bot should use an OpenAI model (or any model of your choice) and invoke your chosen tool when appropriate. This tool can be anything—from a weather lookup to a simple calculator or any other capability you would like to showcase. We will provide you with an OpenAI API key via email with a small budget.
+A simple full-stack application that generates tailored cover letters using AI. Upload your resume/documents, paste a job description, and get a personalized cover letter.
 
-If you have any questions before starting or during the exercise, please send them to us. We will get back to you with the answers as soon as possible.
+## Features
 
-As an AI first company, we don't mind but in fact encourage you to use all available tools and resources at your disposal (codex, Github CoPilot, StackOverflow, etc.).
+- **openAI-Powered Chat**: Conversational interface using OpenAI GPT models
+- **Document Upload**: Upload resumes, portfolios, or any relevant documents (PDF, TXT, DOCX)
+- **Resume Review & Feedback**: Get comprehensive, actionable feedback on your resume
+- **Cover Letter Generation**: Creates customized cover letters based on your documents and job descriptions
+- **PDF Export**: Download generated cover letters as formatted PDFs
+- **Persistent Storage**: Chat history and uploads saved to MongoDB
+- **Session Management**: Secure access code-based authentication
+- **Multi-Threading**: Manage multiple conversations in separate threads
 
-> **Timebox:** Aim for ~6–8 hours of focused effort. It’s OK if you don’t complete all stretch goals. Optimize for clarity, quality, and trade‑offs. We are a team that values communication as well as working fast. We ask for you to take at most 5 days to complete the project. If you need additional time, please let us know.
-> 
-> **Stack:** Frontend in **React + TailwindCSS**. Backend in **Node (TypeScript/JS)** *or* **Python**. Any build tooling is fine.
+## Quick Start
 
----
+### Prerequisites
 
-## Starter repository
+- Python 3.8+
+- Node.js 16+
+- MongoDB 
+- OpenAI API key
 
-* We will provide a repo with three folders:
+### 1. Backend Setup
 
-    * `ui/` – bare‑bones React + Tailwind starter
-    * `py-api/` – bare‑bones Flask starter
-    * `ts-api/` – bare‑bones TypeScript Express starter
-* You may **fork this repo** *or* start from scratch.
-* Use any build tooling you prefer.
+```bash
+cd py-api
+pip install -r requirements.txt
+```
 
----
+Create `.env` file in `py-api/`:
+```bash
+OPENAI_API_KEY=your_openai_api_key_here
+ENABLE_MONGODB=true  # Set to false to disable persistence
+MONGODB_URI=mongodb://localhost:27017/ 
+```
 
-## Minimum Requirements (MVP)
+Run the backend:
+```bash
+python app.py
+```
 
-1. **Chat UI (React + Tailwind)**
+Backend runs on `http://localhost:5050`
 
-    * Text input and send button.
-    * Message list with clear separation of **user** and **bot** messages.
-    * Loading/disabled states and basic error UI.
+### 2. Frontend Setup
 
-2. **Backend API** (Node or Python)
+```bash
+cd ui
+npm install
+npm run dev
+```
 
-    * Working backend with good routing naming conventions that work with the UI.
+Frontend runs on `http://localhost:5173`
 
-3. **LLM Tool Integration**
+### 3. Access the App
 
-    * Implement at least one tool the model can call via your backend (e.g., calculator, weather lookup, todo list manager, etc.).
-    * The bot should decide **when** to call the tool based on the conversation.
-    * Document what the tool does and any external services or data sources it uses.
+1. Open `http://localhost:5173`
+2. Enter an access code (any code works - creates a new session)
+3. Upload your documents
+4. Paste a job description
+5. Get your cover letter!
 
-4. **Chat Memory**
+### 4. Set up MongoDB
+1. Instructions in py-api/app/MONGODB_SETUP.md
 
-    * The chatbot is aware of previous messages and can remember them.
-      * Does not need to be persistent if user refreshes the page.
+## Usage
 
-5. **Ability to delete messages**
+The application supports multiple workflows:
 
-    * User should be able to delete messages from the chat history.
+### Resume Review & Feedback
+
+Get comprehensive feedback on your resume:
+- Upload your resume (PDF, DOCX, or TXT format)
+- Ask: "Review my resume" or "Can you give me feedback on my resume?"
+- Optionally share a job description first for targeted feedback
+- Receive detailed analysis with actionable suggestions
+
+The AI analyzes:
+- Structure and formatting
+- Content quality and relevance
+- Language and action verbs
+- Quantifiable achievements
+- Skills organization
+- Alignment with job requirements (if job description provided)
+
+**See [RESUME_REVIEW_FEATURE.md](./RESUME_REVIEW_FEATURE.md) for detailed documentation.**
+
+### Cover Letter Generation
+
+Create tailored cover letters:
+1. Upload your resume and relevant documents
+2. Share the job description
+3. Ask: "Draft a cover letter"
+4. Review and request edits as needed
+5. Download as a styled PDF
+
+### Combined Workflow
+
+Get resume feedback AND a tailored cover letter based on role:
+1. Upload your resume
+2. Share a job description
+3. Ask: "Review my resume for this role"
+4. Get targeted feedback
+5. Ask: "Now draft a cover letter"
+6. Download or drag and drop cover 
+
+## Architecture
+
+```
+ui/ (React + TypeScript + Tailwind)
+  └── HomePage.tsx - Main chat interface
+
+py-api/ (Flask + Python)
+  ├── app/
+  │   ├── routes/ - API endpoints (auth, chat, uploads, cover letters)
+  │   ├── services/ - Business logic (OpenAI, PDF generation, MongoDB)
+  │   └── utils/ - Auth helpers, text processing
+  └── app.py - Entry point
+```
+
+## Key Technologies
+
+- **Frontend**: React, TypeScript, Tailwind CSS, Vite
+- **Backend**: Flask, Python
+- **AI**: OpenAI GPT-4
+- **Storage**: MongoDB
+- **File Processing**: PyPDF, python-docx, FPDF2
+
+## API Endpoints
+
+- `POST /api/auth/verify` - Create/verify access code session
+- `POST /api/chat` - Send message and get AI response
+- `POST /api/uploads` - Upload documents
+- `GET /api/uploads` - List uploaded files
+- `DELETE /api/uploads/:id` - Delete a file
+- `GET /api/chat/history` - Get chat history from MongoDB
+- `DELETE /api/chat/history` - Clear chat history
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | Your OpenAI API key | Required |
+| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/
+
+## Development Notes
+
+- Files are stored in MongoDB GridFS when persistence is enabled
+- Chat history is tied to access codes (sessions)
+- Cover letters are generated with specific formatting for professional output
+- Maximum file upload size: 5MB per request
+
+## Trade-offs & Future Improvements
+
+**Current Trade-offs:**
+- Simple access code auth (no passwords/encryption)
+- File uploads limited to 5MB
+- No logic for resume PDF generation/formatting
 
 
-6. **Working end‑to‑end flow**
+**Future Enhancements:**
+- Add OAuth/proper authentication
+- Implement streaming responses for better UX
+- Add cover letter templates/customization
+- Add resume PDF generation logic 
+- Add email API to schedule follow up message for applications
+- Add rate limiting and usage quotas
+- Support more document formats
 
-    * Example: user asks a question → model triggers your tool → server runs the tool → bot replies with a concise, helpful answer.
-    * Basic error handling (invalid inputs, network failure, etc.) with useful messaging.
+## Testing
 
-7. **README**
+Test MongoDB connection:
+```bash
+cd py-api
+python test_mongodb.py
+```
 
-    * Setup & run instructions, environment variables, and short architecture notes (what you built, trade‑offs, what you would do next).
+Test authentication:
+```bash
+python test_persistent_auth.py
+```
 
----
+Test file uploads:
+```bash
+python test_upload_persistence.py
+```
 
-## Above‑and‑Beyond (Stretch)
+## Tool documentation
 
-1. **User Feedback**: User can thumb up/down a message.
-2. **Plan‑and‑Execute Agent**
+# PDF Generator Tool
 
-    * Implement a light planning layer: the model produces an explicit **plan** then runs through each step.
+## What It Does
+- Converts stored cover letter drafts (and, when text is available, resumes) into downloadable PDFs for chat responses.
+- Applies fixed styling: Helvetica fonts, brand colors, safe margins, and auto page breaks.
 
-3. **Streamed Responses**
+## How It’s Called
+- `POST /api/cover-letters/<letter_id>/pdf` (see `py-api/app/routes/cover_letters.py`) returns the PDF for an existing draft after session and placeholder checks.
+- Chat handler in `py-api/app/routes/chat.py` requests a PDF via `render_cover_letter_pdf` and embeds the base64 bytes in the reply.
 
-    * **SSE/WebSocket** streaming of assistants **thinking** or **plan steps**.
+## Implementation Notes
+- Core logic in `py-api/app/services/pdf_service.py`.
+- `render_cover_letter_pdf` is the primary entry; `_wrap_long_words_for_pdf` and `_latin1_safe` keep text within FPDF limits.
+- `render_resume_pdf` is a fallback helper that stops early if no textual content is present.
 
-4. **Persistence**
+## Inputs & Data
+- Records come from `app.storage.cover_letters` or MongoDB via the letter service and include fields such as `id`, `profile_id`, `name`, `header_date`, `text`, and optional `uploaded_at` or base64 `contents`.
 
-    * Store conversations in a database **SQL/MongoDB/ect**.
+## Dependencies & Ops
+- Uses `fpdf2` for PDF rendering and optionally `pyphen` for hyphenation; both degrade gracefully if hyphenation fails.
+- Routes fail fast when placeholders remain unresolved and log render errors as `pdf_generation_failed` for troubleshooting.
 
-5. **Deployment**
 
-    * Deploy to a cloud of your choice (e.g., Vercel/Firebase/Heroku/Supabase/ect).
-    * Provide a public URL in the README.
 
-* These are all optional, but we encourage you to try them out. If you have other features that you think would be cool, feel free to add them and document it in the README.
-
----
-
-## Data Sources
-
-Feel free to choose any APIs or data sources that suit the tool you want to build. Document how to obtain access and any setup required so we can run it locally.
-
----
-
-## What we are looking for
-
-When assessing the results, these are the main areas we will be looking at.
-
-It does not need to be perfect. We will be assessing it holistically.
-
-These are the areas we are generally interested in:
-
-- The feature is complete and works according to minimum requirements. It is stable, and edge cases are handled in a sensible, thought-out manner. There is error handling and authentication is considered (Does not need to be implemented).
-- The code is well organized, easy to understand and readable, it follows best practices.
-- Feature implemented in a user-friendly, UI looks cohesive and delightful.
-- Well structured README with clear instructions on how to run the project and an overview on how you built it.
-- Mostly importantly, we want to see your communication style throughout the project. As a small team that moves fast, **communication is extremely important** to us.
----
-
-## Submission
-When done, please email us:
-* Public GitHub repo link.
-* In your repo, please update the **README** with:
-    * clear local run instructions for **both** the UI and your chosen API (`py-api` or `ts-api`) including env vars and how to obtain API keys if needed.
-    * brief architecture notes & trade‑offs.
-    * any stretch goals you implemented.
-* deployment URL if you did deploy.
-
----
-
- ## After Submission 
-We will do an internal code review of your code and share feedback with you over email. If we like what we see, we will invite you to the technical interview with the team to discuss your solution.
